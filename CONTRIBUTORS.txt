@@ -3,3 +3,7 @@ List of contributors:
 get_spot_duration.py:
 
  - Alexei Besogonov - cyberax at amazon dot com
+
+ecs-spot-asg-two-cluster.yaml:
+
+ - Anuj Sharma - anshrma at amazon dot com
