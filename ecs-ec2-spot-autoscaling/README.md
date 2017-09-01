@@ -14,7 +14,7 @@ UserData for spot instance LaunchConfiguration runs a script, which listens to E
 
 ### Architecture
 
-[![](images/ecs-spot-ondemand-autoscaling.jpeg)][architecture]
+![Architecture](images/ecs-spot-ondemand-autoscaling.jpeg)
 
 ### Prerequisites
 
