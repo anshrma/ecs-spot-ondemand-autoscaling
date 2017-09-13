@@ -3,14 +3,15 @@
 
 # Powering your Amazon ECS Cluster with a mix of Amazon EC2 Spot Instances and Amazon EC2 OnDemand Instances with independent AutoScaling
 
-## The problem
+## **Background**
+
 [AWS Elastic Compute Cloud (EC2) Spot instances](https://aws.amazon.com/ec2/spot/pricing/) provide you with access to unused Amazon EC2 capacity at steep discounts relative to On-Demand prices.  The Spot price fluctuates based on the supply and demand of available unused EC2 capacity.
 When you request Spot instances, you specify the maximum Spot price you are willing to pay.  Your Spot instance is launched when the Spot price is lower than the price you specified, and will continue to run until you choose to terminate it or the Spot price exceeds the maximum price you specified.
 The key differences between Spot instances and On-Demand instances are that Spot instances might not start immediately, the hourly price for Spot instances varies based on demand, and Amazon EC2 can terminate an individual Spot instance as the hourly price for, or availability of, Spot instances changes.
 
 In order to overcome this problem, in this solution, I will walk through a design pattern and codebase, in which a mix of spot instances and on demand instances can be used to serve critical workloads on [Amazon EC2 Container Service (ECS)](https://aws.amazon.com/ecs/) in conjunction with [AWS AutoScaling](https://aws.amazon.com/autoscaling/).
 
-### Solution
+## **Solution**
 
 ![Architecture](images/ecs-spot-ondemand-autoscaling.jpeg)
 
@@ -30,20 +31,11 @@ In the same way, AutoScaling removes one instance from the respective clusters, 
 A shell script (created at the userdata during the instance bootstrap) listens to the termination notices sent to the spot instances in order set the ECS container instance in DRAINING state.
 ECS Service AutoScaling decreases desiredCount by one, if the service CPUUtilization and/or MemoryUtilization metrics dips below 20%.
 
-## Getting Started
 
-This CloudFormation template will deploy two ECS Clusters, one with OnDemand Instances and another with Spot Instances.
-The respective ECS Services running tasks at the respective clusters registers the containers with the same target group, thereby routing traffic to on-demand and spot instances.
-The respective ECS Service uses CPU Utilization and Memory Utilization metrics to increase/decrease the number of tasks.
-Respective cluster's CPU Reservation and Memory Reservation Metrics are used to independently increase/decrease the number of instances (spot or on-demand).
-UserData for spot instance LaunchConfiguration runs a script, which listens to EC2 Spot Instance termination notice to automatically set the ECS container instances in **DRAINING** state when a Spot Instance termination notice is detected. The handler script also publishes a message to an SNS topic created by the CloudFormation stack.
-
-
-
-## Pre-Requisites
-This example uses [AWS Command Line Interface](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) to run Step-3 below.
-
-Please follow [instructions](http://docs.aws.amazon.com/cli/latest/userguide/installing.html) if you haven't installed AWS CLI. Your CLI [configuration](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) need PowerUserAccess and IAMFullAccess [IAM policies](http://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) associated with your credentials
+## **Pre-Requisites**
+This example uses [AWS Command Line Interface](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) to run Step-2 below.
+Please follow [instructions](http://docs.aws.amazon.com/cli/latest/userguide/installing.html) if you haven't installed AWS CLI.
+Your CLI [configuration](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) need PowerUserAccess and IAMFullAccess [IAM policies](http://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) associated with your credentials
 
 ```console
 aws --version
@@ -51,7 +43,7 @@ aws --version
 
 Output from above must yield **AWS CLI version >= 1.11.37**
 
-## Quick setup just in two steps
+## **Deployment**
 
 
 #### 1. Clone the repository
