@@ -370,7 +370,7 @@ Resources:
         - ScalingAdjustment: -1
           MetricIntervalLowerBound: -20
           MetricIntervalUpperBound: -10
-  HighCPUSpotServiceAlarm:
+  HighCPUServiceAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmDescription: CPUUtilization exceeding threshold . Triggers scale up
@@ -386,10 +386,10 @@ Resources:
       Statistic: Average
       Period: '60'
       EvaluationPeriods: '2'
-      Threshold: '80'
+      Threshold: '70'
       AlarmActions: [!Ref ScalingUpPolicyService]
       ComparisonOperator: GreaterThanThreshold
-  LowCPUSpotServiceAlarm:
+  LowCPUServiceAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmDescription: CPUUtilization lowers threshold . Triggers scale down
@@ -445,7 +445,7 @@ Resources:
       Statistic: Maximum
       Period: '60'
       EvaluationPeriods: '1'
-      Threshold: '50'
+      Threshold: '70'
       AlarmActions: [!Ref ClusterScaleUpPolicy]
       ComparisonOperator: GreaterThanThreshold
   ClusterHighMemoryReservationAlarm:
@@ -481,7 +481,7 @@ Resources:
       Statistic: Average
       Period: '60'
       EvaluationPeriods: '10'
-      Threshold: '25'
+      Threshold: '20'
       AlarmActions: [!Ref ClusterScaleDownPolicy]
       ComparisonOperator: LessThanThreshold
 
