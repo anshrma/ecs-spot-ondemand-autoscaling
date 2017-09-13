@@ -3,6 +3,32 @@
 
 # Powering your Amazon ECS Cluster with a mix of Amazon EC2 Spot Instances and Amazon EC2 OnDemand Instances with independent AutoScaling
 
+## The problem
+[AWS Elastic Compute Cloud (EC2) Spot instances](https://aws.amazon.com/ec2/spot/pricing/) provide you with access to unused Amazon EC2 capacity at steep discounts relative to On-Demand prices.  The Spot price fluctuates based on the supply and demand of available unused EC2 capacity.
+When you request Spot instances, you specify the maximum Spot price you are willing to pay.  Your Spot instance is launched when the Spot price is lower than the price you specified, and will continue to run until you choose to terminate it or the Spot price exceeds the maximum price you specified.
+The key differences between Spot instances and On-Demand instances are that Spot instances might not start immediately, the hourly price for Spot instances varies based on demand, and Amazon EC2 can terminate an individual Spot instance as the hourly price for, or availability of, Spot instances changes.
+
+In order to overcome this problem, in this solution, I will walk through a design pattern and codebase, in which a mix of spot instances and on demand instances can be used to serve critical workloads on [Amazon EC2 Container Service (ECS)](https://aws.amazon.com/ecs/) in conjunction with [AWS AutoScaling](https://aws.amazon.com/autoscaling/).
+
+### Solution
+
+![Architecture](images/ecs-spot-ondemand-autoscaling.jpeg)
+
+In this solution, two [ECS clusters](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_clusters.html) are used, one using spot instances and another using on-demand instances.
+Separating the two clusters based on the pricing options gives an opportunity to harness [cluster reservation metrics](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/cloudwatch-metrics.html#cluster_reservation).
+AutoScaling adds one instance to the respective cluster, if the cluster CPUReservation and/or MemoryReservation [AWS CloudWatch](https://aws.amazon.com/cloudwatch/) metrics exceed 60%, thereby ensuring sufficient capacity to run the tasks.
+
+Both the clusters run individual [ECS Services](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs_services.html) which allows to maintain desired numbers of instances of a specific [ECS Task definition](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definitions.html).
+Autoscaling adds one more instance of the task definition by increasing [desiredCount](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/service_definition_paramters.html) by one, if the service [CPUUtilization and/or MemoryUtilization](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/cloudwatch-metrics.html#service_utilization) metrics exceeds 60% .
+
+Both the ECS Services run behind the same [Application Load Balancer](https://aws.amazon.com/elasticloadbalancing/applicationloadbalancer/)
+For the cluster, which runs spot instances, AutoScaling places the bid for spot instances and if it gets fulfilled, the instance is added to the cluster and tasks will be placed to run on the instances using "spread" [ECS Task placement strategy](http://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-placement-strategies.html).
+If the bid price gets beaten up by the market price , the spot instances will get terminated, resulting in increase of Memory Utilization/CPU Utilization Metrics, due to increased load on tasks running on on-demand instances. Once Memory Utilization/CPU Utilization Metrics breaches the threshold (set to 60%) , ECS Service adds one more instance of the task definition at on-demand instances, which then increases the
+cluster CPUReservation and/or MemoryReservation. Finally, once cluster CPUReservation and/or MemoryReservation metrics breaches the threshold (set to 60%), AutoScaling adds one more instance (on-demand)to the cluster running .
+
+In the same way, AutoScaling removes one instance from the respective clusters, if the cluster CPUReservation and/or MemoryReservation metrics dips below 20%, thereby removing excess capacity to run the tasks.
+A shell script (created at the userdata during the instance bootstrap) listens to the termination notices sent to the spot instances in order set the ECS container instance in DRAINING state.
+ECS Service AutoScaling decreases desiredCount by one, if the service CPUUtilization and/or MemoryUtilization metrics dips below 20%.
 
 ## Getting Started
 
@@ -12,9 +38,7 @@ The respective ECS Service uses CPU Utilization and Memory Utilization metrics t
 Respective cluster's CPU Reservation and Memory Reservation Metrics are used to independently increase/decrease the number of instances (spot or on-demand).
 UserData for spot instance LaunchConfiguration runs a script, which listens to EC2 Spot Instance termination notice to automatically set the ECS container instances in **DRAINING** state when a Spot Instance termination notice is detected. The handler script also publishes a message to an SNS topic created by the CloudFormation stack.
 
-### Architecture
 
-![Architecture](images/ecs-spot-ondemand-autoscaling.jpeg)
 
 ## Pre-Requisites
 This example uses [AWS Command Line Interface](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) to run Step-3 below.
